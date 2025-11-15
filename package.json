@@ -4,6 +4,10 @@
   "description": "Scrapes Stack Overflow for error solutions and displays in Smart Help",
   "version": "0.1.0",
   "publisher": "m-e pasta",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/m-epasta/stackScrapper"
+  },
   "engines": {
     "vscode": "^1.60.0"
   },
