@@ -8,4 +8,4 @@ function testOnErrors() { /* do not test output: it test code actions/helper */
 
     let x = 5;
     x();
-}
+
