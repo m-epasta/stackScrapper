@@ -9,15 +9,13 @@
     "url": "https://github.com/m-epasta/stackScrapper"
   },
   "engines": {
-    "vscode": "^1.60.0"
+    "vscode": "^1.75.0"
   },
   "categories": [
     "Other",
     "Programming Languages"
   ],
   "activationEvents": [
-    "onCommand:errorHelp.searchError",
-    "onCommand:errorHelp.quickSearch",
     "onLanguage:javascript",
     "onLanguage:typescript",
     "onLanguage:python",
@@ -28,35 +26,35 @@
     "onLanguage:ruby",
     "onLanguage:go"
   ],
-  "main": "./out/src/extension.js",
+  "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "errorHelp.searchError",
+        "command": "stackScrapper.searchError",
         "title": "Search Error on Stack Overflow",
         "category": "Error Help",
         "icon": "$(search)"
       },
       {
-        "command": "errorHelp.quickSearch",
+        "command": "stackScrapper.quickSearch",
         "title": "Quick Search Error",
         "category": "Error Help",
         "icon": "$(zap)"
       },
       {
-        "command": "errorHelp.searchCurrentError",
+        "command": "stackScrapper.searchCurrentError",
         "title": "Search Current Error",
         "category": "Error Help"
       },
       {
-        "command": "errorHelp.searchSelectedError",
+        "command": "stackScrapper.searchSelectedError",
         "title": "Search Selected Error",
         "category": "Error Help"
       }
     ],
     "keybindings": [
       {
-        "command": "errorHelp.quickSearch",
+        "command": "stackScrapper.quickSearch",
         "key": "ctrl+shift+;",
         "mac": "cmd+shift+;",
         "when": "editorTextFocus"
@@ -65,15 +63,15 @@
     "menus": {
       "command-palette": [
         {
-          "command": "errorHelp.searchError"
+          "command": "stackScrapper.searchError"
         },
         {
-          "command": "errorHelp.quickSearch"
+          "command": "stackScrapper.quickSearch"
         }
       ],
       "editor/context": [
         {
-          "command": "errorHelp.searchSelectedError",
+          "command": "stackScrapper.searchSelectedError",
           "when": "editorHasSelection",
           "group": "errorhelp@1"
         }
@@ -86,7 +84,7 @@
           {
             "title": "Search Error on Stack Overflow",
             "kind": "quickfix",
-            "command": "errorHelp.searchCurrentError"
+            "command": "stackScrapper.searchCurrentError"
           }
         ]
       },
@@ -96,7 +94,7 @@
           {
             "title": "Search Error on Stack Overflow",
             "kind": "quickfix",
-            "command": "errorHelp.searchCurrentError"
+            "command": "stackScrapper.searchCurrentError"
           }
         ]
       },
@@ -106,7 +104,7 @@
           {
             "title": "Search Error on Stack Overflow",
             "kind": "quickfix",
-            "command": "errorHelp.searchCurrentError"
+            "command": "stackScrapper.searchCurrentError"
           }
         ]
       },
@@ -116,7 +114,7 @@
           {
             "title": "Search Error on Stack Overflow",
             "kind": "quickfix",
-            "command": "errorHelp.searchCurrentError"
+            "command": "stackScrapper.searchCurrentError"
           }
         ]
       },
@@ -126,7 +124,7 @@
           {
             "title": "Search Error on Stack Overflow",
             "kind": "quickfix",
-            "command": "errorHelp.searchCurrentError"
+            "command": "stackScrapper.searchCurrentError"
           }
         ]
       },
@@ -136,7 +134,7 @@
           {
             "title": "Search Error on Stack Overflow",
             "kind": "quickfix",
-            "command": "errorHelp.searchCurrentError"
+            "command": "stackScrapper.searchCurrentError"
           }
         ]
       },
@@ -146,7 +144,7 @@
           {
             "title": "Search Error on Stack Overflow",
             "kind": "quickfix",
-            "command": "errorHelp.searchCurrentError"
+            "command": "stackScrapper.searchCurrentError"
           }
         ]
       },
@@ -156,7 +154,7 @@
           {
             "title": "Search Error on Stack Overflow",
             "kind": "quickfix",
-            "command": "errorHelp.searchCurrentError"
+            "command": "stackScrapper.searchCurrentError"
           }
         ]
       },
@@ -166,7 +164,7 @@
           {
             "title": "Search Error on Stack Overflow",
             "kind": "quickfix",
-            "command": "errorHelp.searchCurrentError"
+            "command": "stackScrapper.searchCurrentError"
           }
         ]
       }
@@ -225,22 +223,22 @@
       "explorer": [
         {
           "id": "errorHelpView",
-          "name": "Error Help - Stack Overflow",
-          "when": "errorHelp.hasResults"
+          "name": "STACKSCRAPPER- Stack Overflow",
+          "when": "stackScrapper.hasResults"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "errorHelpView",
-        "contents": "No error search results yet. [Search Current Error](command:errorHelp.searchCurrentError)\n[Quick Search Error](command:errorHelp.quickSearch)"
+        "view": "stackScrapperView",
+        "contents": "No error search results yet. [Search Current Error](command:stackScrapper.searchCurrentError)\n[Quick Search Error](command:stackScrapper.quickSearch)"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "error-help",
-          "title": "Error Help",
+          "id": "stack-scrapper",
+          "title": "stack Scrapper",
           "icon": "$(question)"
         }
       ]

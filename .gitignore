@@ -10,3 +10,4 @@ vsc-extension-quickstart.md
 **/out/
 .d.ts
 package-lock.json
+stackScrapper-0.1.0

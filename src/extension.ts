@@ -25,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Command: Search current error
     const searchCurrentErrorCommand = vscode.commands.registerCommand('errorHelp.searchCurrentError', async () => {
         try {
-            const errorContext = await errorDetector.getCurrentErrorContext(); // Fixed method name
+            const errorContext = await errorDetector.getCurrentErrorContext(); 
             if (!errorContext) {
                 vscode.window.showWarningMessage('No error detected in current file.');
                 return;
@@ -41,7 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
     const quickSearchCommand = vscode.commands.registerCommand('errorHelp.quickSearch', async () => {
         try {
             const errorContext = await errorDetector.getCurrentErrorContext() || 
-                                await errorDetector.getSelectedErrorContext(); // Fixed method names
+                                await errorDetector.getSelectedErrorContext(); 
             
             if (!errorContext) {
                 vscode.window.showWarningMessage('No error detected. Select an error message or ensure there are diagnostics.');
@@ -57,7 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Command: Search selected error
     const searchSelectedErrorCommand = vscode.commands.registerCommand('errorHelp.searchSelectedError', async () => {
         try {
-            const errorContext = await errorDetector.getSelectedErrorContext(); // Fixed method name
+            const errorContext = await errorDetector.getSelectedErrorContext(); 
             if (!errorContext) {
                 vscode.window.showWarningMessage('Please select an error message to search.');
                 return;
@@ -96,6 +96,8 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     async function performSearch(errorContext: any) {
+        console.log("Starting search with context:", errorContext); 
+        
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: `Searching Stack Overflow for: ${errorContext.errorMessage.substring(0, 50)}...`,
@@ -103,18 +105,31 @@ export function activate(context: vscode.ExtensionContext) {
         }, async (progress) => {
             progress.report({ increment: 0 });
 
-            // Search Stack Overflow
-            const searchResult = await stackOverflowSearcher.search(errorContext);
-            progress.report({ increment: 100 });
+            try {
+                // Search Stack Overflow
+                console.log("Calling stackOverflowSearcher.search..."); 
+                const searchResult = await stackOverflowSearcher.search(errorContext);
+                console.log("Search completed, result:", searchResult); 
+                progress.report({ increment: 100 });
 
-            // Show results - Use the static method to create/show panel
-            resultsPanel = ResultsPanel.createOrShow(context.extensionUri);
-            resultsPanel.onDidDispose(() => {
-                resultsPanel = undefined;
-            });
+                // Show results
+                if (!resultsPanel) {
+                    console.log("Creating new results panel..."); 
+                    resultsPanel = ResultsPanel.createOrShow(context.extensionUri);
+                    resultsPanel.onDidDispose(() => {
+                        resultsPanel = undefined;
+                    });
+                }
 
-            resultsPanel.update(searchResult, errorContext);
-            resultsPanel.reveal();
+                console.log("Updating panel with results...");
+                resultsPanel.update(searchResult, errorContext);
+                resultsPanel.reveal();
+                console.log("Panel update complete");
+                
+            } catch (error: any) {
+                console.error("Error in performSearch:", error);
+                vscode.window.showErrorMessage(`Search failed: ${error.message}`);
+            }
         });
     }
 
