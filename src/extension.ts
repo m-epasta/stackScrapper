@@ -9,6 +9,12 @@ let outputChannel: vscode.OutputChannel;
 export function activate(context: vscode.ExtensionContext) {
     outputChannel = vscode.window.createOutputChannel('STACKSCRAPPER');
     outputChannel.appendLine('StackScrapper extension activated');
+    outputChannel.show();
+
+    const testCommand = vscode.commands.registerCommand('stackscrapper.test', () => {
+        outputChannel.appendLine('TEST COMMAND EXECUTED');
+        vscode.window.showInformationMessage('StackScrapper test command working!');
+    });
     
     const errorDetector = new ErrorDetector();
     const stackOverflowSearcher = new StackOverflowSearcher();
