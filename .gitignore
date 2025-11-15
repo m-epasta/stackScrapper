@@ -1,0 +1,12 @@
+node_module/
+.vscode/**
+.vscode-test/**
+.vscodeignore
+.yarnrc
+vsc-extension-quickstart.md
+**/tsconfig.json
+**/.eslintrc.json
+**/*.map
+**/out/
+.d.ts
+package-lock.json

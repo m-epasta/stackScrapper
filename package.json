@@ -1,0 +1,258 @@
+{
+  "name": "stackScrapper",
+  "displayName": "STACKSCRAPPER - the extension that browse stackoverflow for you.",
+  "description": "Scrapes Stack Overflow for error solutions and displays in Smart Help",
+  "version": "0.1.0",
+  "publisher": "m-e pasta",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Other",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onCommand:errorHelp.searchError",
+    "onCommand:errorHelp.quickSearch",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:python",
+    "onLanguage:java",
+    "onLanguage:cpp",
+    "onLanguage:csharp",
+    "onLanguage:php",
+    "onLanguage:ruby",
+    "onLanguage:go"
+  ],
+  "main": "./out/src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "errorHelp.searchError",
+        "title": "Search Error on Stack Overflow",
+        "category": "Error Help",
+        "icon": "$(search)"
+      },
+      {
+        "command": "errorHelp.quickSearch",
+        "title": "Quick Search Error",
+        "category": "Error Help",
+        "icon": "$(zap)"
+      },
+      {
+        "command": "errorHelp.searchCurrentError",
+        "title": "Search Current Error",
+        "category": "Error Help"
+      },
+      {
+        "command": "errorHelp.searchSelectedError",
+        "title": "Search Selected Error",
+        "category": "Error Help"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "errorHelp.quickSearch",
+        "key": "ctrl+shift+;",
+        "mac": "cmd+shift+;",
+        "when": "editorTextFocus"
+      }
+    ],
+    "menus": {
+      "command-palette": [
+        {
+          "command": "errorHelp.searchError"
+        },
+        {
+          "command": "errorHelp.quickSearch"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "errorHelp.searchSelectedError",
+          "when": "editorHasSelection",
+          "group": "errorhelp@1"
+        }
+      ]
+    },
+    "codeActions": [
+      {
+        "language": "javascript",
+        "actions": [
+          {
+            "title": "Search Error on Stack Overflow",
+            "kind": "quickfix",
+            "command": "errorHelp.searchCurrentError"
+          }
+        ]
+      },
+      {
+        "language": "typescript",
+        "actions": [
+          {
+            "title": "Search Error on Stack Overflow",
+            "kind": "quickfix",
+            "command": "errorHelp.searchCurrentError"
+          }
+        ]
+      },
+      {
+        "language": "python",
+        "actions": [
+          {
+            "title": "Search Error on Stack Overflow",
+            "kind": "quickfix",
+            "command": "errorHelp.searchCurrentError"
+          }
+        ]
+      },
+      {
+        "language": "java",
+        "actions": [
+          {
+            "title": "Search Error on Stack Overflow",
+            "kind": "quickfix",
+            "command": "errorHelp.searchCurrentError"
+          }
+        ]
+      },
+      {
+        "language": "cpp",
+        "actions": [
+          {
+            "title": "Search Error on Stack Overflow",
+            "kind": "quickfix",
+            "command": "errorHelp.searchCurrentError"
+          }
+        ]
+      },
+      {
+        "language": "csharp",
+        "actions": [
+          {
+            "title": "Search Error on Stack Overflow",
+            "kind": "quickfix",
+            "command": "errorHelp.searchCurrentError"
+          }
+        ]
+      },
+      {
+        "language": "php",
+        "actions": [
+          {
+            "title": "Search Error on Stack Overflow",
+            "kind": "quickfix",
+            "command": "errorHelp.searchCurrentError"
+          }
+        ]
+      },
+      {
+        "language": "ruby",
+        "actions": [
+          {
+            "title": "Search Error on Stack Overflow",
+            "kind": "quickfix",
+            "command": "errorHelp.searchCurrentError"
+          }
+        ]
+      },
+      {
+        "language": "go",
+        "actions": [
+          {
+            "title": "Search Error on Stack Overflow",
+            "kind": "quickfix",
+            "command": "errorHelp.searchCurrentError"
+          }
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "STACKSCRAPPER",
+      "properties": {
+        "errorHelp.stackOverflowSearchUrl": {
+          "type": "string",
+          "default": "https://api.stackexchange.com/2.3/search/advanced",
+          "description": "Stack Overflow API endpoint for search"
+        },
+        "errorHelp.site": {
+          "type": "string",
+          "default": "stackoverflow",
+          "description": "Stack Exchange site to search"
+        },
+        "errorHelp.maxResults": {
+          "type": "number",
+          "default": 10,
+          "description": "Maximum number of results to fetch"
+        },
+        "errorHelp.autoDetectErrors": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically detect errors in code"
+        },
+        "errorHelp.includeCodeContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include code context in search queries"
+        },
+        "errorHelp.searchTimeout": {
+          "type": "number",
+          "default": 15000,
+          "description": "Search timeout in milliseconds"
+        },
+        "errorHelp.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Stack Exchange API key (optional)"
+        },
+        "errorHelp.filterByAccepted": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prefer answers with accepted solutions"
+        },
+        "errorHelp.minScore": {
+          "type": "number",
+          "default": 1,
+          "description": "Minimum score for answers"
+        }
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "errorHelpView",
+          "name": "Error Help - Stack Overflow",
+          "when": "errorHelp.hasResults"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "errorHelpView",
+        "contents": "No error search results yet. [Search Current Error](command:errorHelp.searchCurrentError)\n[Quick Search Error](command:errorHelp.quickSearch)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "error-help",
+          "title": "Error Help",
+          "icon": "$(question)"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.60.0",
+    "@types/node": "16.x",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "axios": "^1.4.0"
+  }
+}
