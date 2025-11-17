@@ -1,17 +1,16 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import { SearchResult, ErrorContext, StackOverflowQuestion, StackOverflowAnswer } from './types';
+import { SearchResult, ErrorContext } from './types';
+import { Logger } from './logger';
 
 export class ResultsPanel {
     public static currentPanel: ResultsPanel | undefined;
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
+    private _lastResult: { result: SearchResult, errorContext: ErrorContext } | undefined;
     private _disposables: vscode.Disposable[] = [];
 
     public static createOrShow(extensionUri: vscode.Uri): ResultsPanel {
-        const column = vscode.window.activeTextEditor
-            ? vscode.window.activeTextEditor.viewColumn
-            : undefined;
+        const column = vscode.window.activeTextEditor?.viewColumn;
 
         if (ResultsPanel.currentPanel) {
             ResultsPanel.currentPanel._panel.reveal(column);
@@ -19,8 +18,8 @@ export class ResultsPanel {
         }
 
         const panel = vscode.window.createWebviewPanel(
-            'errorHelpResults',
-            'Error Help - Stack Overflow Results',
+            'stackScrapperResults',
+            'Stack Scrapper - Stack Overflow Results',
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -33,7 +32,6 @@ export class ResultsPanel {
         return ResultsPanel.currentPanel;
     }
 
-    // Change constructor to public
     public constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
         this._panel = panel;
         this._extensionUri = extensionUri;
@@ -41,7 +39,6 @@ export class ResultsPanel {
         
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
         
-        // Handle messages from the webview
         this._panel.webview.onDidReceiveMessage(
             message => {
                 switch (message.type) {
@@ -51,6 +48,15 @@ export class ResultsPanel {
                     case 'copyCode':
                         vscode.env.clipboard.writeText(message.code);
                         vscode.window.showInformationMessage('Code copied to clipboard!');
+                        break;
+                    case 'webviewReady':
+                        Logger.debug('Webview is ready to receive messages');
+                        if (this._lastResult) {
+                            this.sendUpdate(this._lastResult.result, this._lastResult.errorContext);
+                        }
+                        break;
+                    case 'webviewLog':
+                        Logger.log(`Webview: ${message.message}`);
                         break;
                 }
             },
@@ -63,19 +69,31 @@ export class ResultsPanel {
         ResultsPanel.currentPanel = undefined;
         this._panel.dispose();
         while (this._disposables.length) {
-            const x = this._disposables.pop();
-            if (x) {
-                x.dispose();
+            const disposable = this._disposables.pop();
+            if (disposable) {
+                disposable.dispose();
             }
         }
     }
 
     public update(result: SearchResult, errorContext: ErrorContext) {
+        this._lastResult = { result, errorContext };
+        this.sendUpdate(result, errorContext);
+    }
+
+    private sendUpdate(result: SearchResult, errorContext: ErrorContext) {
+        Logger.debug('Sending updateResults to webview');
+
+        const serializableAnswers = Array.from(result.answers.entries());
+
         this._panel.webview.postMessage({
             type: 'updateResults',
-            data: {
-                result,
-                errorContext
+            data: { 
+                result: {
+                    ...result,
+                    answers: serializableAnswers
+                },
+                errorContext 
             }
         });
     }
@@ -88,139 +106,79 @@ export class ResultsPanel {
         this._panel.onDidDispose(callback);
     }
 
-    private _update() {
+    private async _update() {
         const webview = this._panel.webview;
-        this._panel.webview.html = this._getHtmlForWebview(webview);
+        this._panel.webview.html = await this._getHtmlForWebview(webview);
     }
 
-    private _getHtmlForWebview(webview: vscode.Webview): string {
-        // Get path to resources on disk
-        const scriptPath = vscode.Uri.joinPath(this._extensionUri, 'webview', 'main.js');
-        const scriptUri = webview.asWebviewUri(scriptPath);
+    private async _getHtmlForWebview(webview: vscode.Webview): Promise<string> {
+        const htmlPath = vscode.Uri.joinPath(this._extensionUri, 'webview', 'index.html');
         
-        // Use the external HTML file
+        try {
+            const htmlBytes = await vscode.workspace.fs.readFile(htmlPath);
+            let html = Buffer.from(htmlBytes).toString('utf8');
+            
+            const scriptPath = webview.asWebviewUri(
+                vscode.Uri.joinPath(this._extensionUri, 'webview', 'main.js')
+            );
+            
+            html = html.replace('src="main.js"', `src="${scriptPath}"`);
+            
+            return html;
+        } catch (error) {
+            Logger.error(`Failed to load webview HTML: ${error}`);
+            return this._getFallbackHtml();
+        }
+    }
+
+    private _getFallbackHtml(): string {
         return `
             <!DOCTYPE html>
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Error Help - Stack Overflow Results</title>
+                <title>STACKSCRAPPER - Setup Required</title>
                 <style>
-                    /* CSS will be loaded from external file or kept here */
-                    body {
-                        padding: 20px;
-                        font-family: var(--vscode-font-family);
-                        color: var(--vscode-foreground);
-                        background-color: var(--vscode-editor-background);
-                        line-height: 1.4;
+                    body { 
+                        padding: 40px; 
+                        font-family: var(--vscode-font-family); 
+                        color: var(--vscode-foreground); 
+                        background-color: var(--vscode-editor-background); 
+                        line-height: 1.6;
+                        text-align: center;
                     }
-                    
-                    .header {
+                    .error-container {
+                        max-width: 500px;
+                        margin: 0 auto;
+                        padding: 30px;
+                        border: 1px solid var(--vscode-inputValidation-errorBorder);
+                        border-radius: 8px;
+                        background: var(--vscode-inputValidation-errorBackground);
+                    }
+                    .error-icon {
+                        font-size: 48px;
                         margin-bottom: 20px;
-                        padding-bottom: 15px;
-                        border-bottom: 1px solid var(--vscode-panel-border);
                     }
-                    
-                    .query {
-                        font-style: italic;
-                        color: var(--vscode-descriptionForeground);
-                        margin: 10px 0;
-                        font-size: 0.9em;
-                    }
-                    
-                    .result-item {
+                    .error-code {
+                        background: var(--vscode-badge-background);
+                        color: var(--vscode-badge-foreground);
+                        padding: 8px 16px;
+                        border-radius: 4px;
+                        font-family: monospace;
                         margin: 20px 0;
-                        padding: 15px;
-                        border: 1px solid var(--vscode-panel-border);
-                        border-radius: 4px;
-                        background: var(--vscode-editor-inactiveSelectionBackground);
-                    }
-                    
-                    .question-title {
-                        font-size: 1.1em;
-                        font-weight: bold;
-                        margin-bottom: 8px;
-                    }
-                    
-                    .question-title a {
-                        color: var(--vscode-textLink-foreground);
-                        text-decoration: none;
-                    }
-                    
-                    .question-title a:hover {
-                        text-decoration: underline;
-                    }
-                    
-                    .question-meta {
-                        font-size: 0.85em;
-                        color: var(--vscode-descriptionForeground);
-                        margin-bottom: 10px;
-                    }
-                    
-                    .answer {
-                        margin: 12px 0;
-                        padding: 12px;
-                        background: var(--vscode-editor-background);
-                        border-left: 3px solid var(--vscode-inputValidation-infoBorder);
-                        border-radius: 2px;
-                    }
-                    
-                    .accepted-answer {
-                        border-left-color: var(--vscode-testing-iconPassed);
-                        background: var(--vscode-inputValidation-infoBackground);
-                    }
-                    
-                    .answer-meta {
-                        font-size: 0.8em;
-                        color: var(--vscode-descriptionForeground);
-                        margin-bottom: 8px;
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-                    }
-                    
-                    .code-block {
-                        background: var(--vscode-textCodeBlock-background);
-                        padding: 12px;
-                        border-radius: 4px;
-                        margin: 10px 0;
-                        font-family: var(--vscode-editor-font-family);
-                        font-size: 0.9em;
-                        overflow-x: auto;
-                        position: relative;
-                    }
-                    
-                    .copy-btn {
-                        background: var(--vscode-button-background);
-                        color: var(--vscode-button-foreground);
-                        border: none;
-                        padding: 6px 12px;
-                        border-radius: 3px;
-                        cursor: pointer;
-                        font-size: 0.8em;
-                        margin-top: 8px;
-                    }
-                    
-                    .copy-btn:hover {
-                        background: var(--vscode-button-hoverBackground);
+                        display: inline-block;
                     }
                 </style>
             </head>
             <body>
-                <div class="header">
-                    <h1>🔍 Error Help Results</h1>
-                    <div id="query-info" class="query"></div>
-                    <div id="error-context" class="error-context" style="display: none;"></div>
+                <div class="error-container">
+                    <div class="error-icon">⚠️</div>
+                    <h2>Setup Required</h2>
+                    <p>The extension needs to be reinstalled or rebuilt.</p>
+                    <div class="error-code">ERR_WEBVIEW_MISSING</div>
+                    <p>Please restart Visual Studio Code or reinstall the extension.</p>
                 </div>
-                <div id="results-container">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>Loading Stack Overflow results...</p>
-                    </div>
-                </div>
-
-                <script src="${scriptUri}"></script>
             </body>
             </html>
         `;

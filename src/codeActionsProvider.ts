@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { ErrorDetector } from './errorDetector';
 
-export class ErrorHelpCodeActionProvider implements vscode.CodeActionProvider {
+export class stackScrapperCodeActionProvider implements vscode.CodeActionProvider {
     private errorDetector: ErrorDetector;
 
     constructor() {
@@ -49,7 +49,7 @@ export class ErrorHelpCodeActionProvider implements vscode.CodeActionProvider {
         );
 
         action.command = {
-            command: 'errorHelp.searchCurrentError',
+            command: 'stackScrapper.searchCurrentError',
             title: 'Search Error on Stack Overflow',
             tooltip: 'Search Stack Overflow for this error solution'
         };
@@ -71,7 +71,7 @@ export class ErrorHelpCodeActionProvider implements vscode.CodeActionProvider {
         );
 
         action.command = {
-            command: 'errorHelp.searchSelectedError',
+            command: 'stackScrapper.searchSelectedError',
             title: 'Search Selected Error on Stack Overflow'
         };
 

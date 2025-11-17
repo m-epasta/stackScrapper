@@ -73,7 +73,7 @@
         {
           "command": "stackScrapper.searchSelectedError",
           "when": "editorHasSelection",
-          "group": "errorhelp@1"
+          "group": "stackScrapper@1"
         }
       ]
     },
@@ -172,47 +172,47 @@
     "configuration": {
       "title": "STACKSCRAPPER",
       "properties": {
-        "errorHelp.stackOverflowSearchUrl": {
+        "stackScrapper.stackOverflowSearchUrl": {
           "type": "string",
           "default": "https://api.stackexchange.com/2.3/search/advanced",
           "description": "Stack Overflow API endpoint for search"
         },
-        "errorHelp.site": {
+        "stackScrapper.site": {
           "type": "string",
           "default": "stackoverflow",
           "description": "Stack Exchange site to search"
         },
-        "errorHelp.maxResults": {
+        "stackScrapper.maxResults": {
           "type": "number",
           "default": 10,
           "description": "Maximum number of results to fetch"
         },
-        "errorHelp.autoDetectErrors": {
+        "stackScrapper.autoDetectErrors": {
           "type": "boolean",
           "default": true,
           "description": "Automatically detect errors in code"
         },
-        "errorHelp.includeCodeContext": {
+        "stackScrapper.includeCodeContext": {
           "type": "boolean",
           "default": true,
           "description": "Include code context in search queries"
         },
-        "errorHelp.searchTimeout": {
+        "stackScrapper.searchTimeout": {
           "type": "number",
           "default": 15000,
           "description": "Search timeout in milliseconds"
         },
-        "errorHelp.apiKey": {
+        "stackScrapper.apiKey": {
           "type": "string",
           "default": "",
           "description": "Stack Exchange API key (optional)"
         },
-        "errorHelp.filterByAccepted": {
+        "stackScrapper.filterByAccepted": {
           "type": "boolean",
           "default": true,
           "description": "Prefer answers with accepted solutions"
         },
-        "errorHelp.minScore": {
+        "stackScrapper.minScore": {
           "type": "number",
           "default": 1,
           "description": "Minimum score for answers"
@@ -222,7 +222,7 @@
     "views": {
       "explorer": [
         {
-          "id": "errorHelpView",
+          "id": "stackScrapperView",
           "name": "STACKSCRAPPER- Stack Overflow",
           "when": "stackScrapper.hasResults"
         }
@@ -246,8 +246,9 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "compile": "tsc -p ./ && cp -r webview out/",
+    "watch": "tsc -watch -p ./",
+    "copy-webview": "cp -r webview out/ || xcopy webview out\\webview /E /I || echo 'Copy webview manually'"
   },
   "devDependencies": {
     "@types/vscode": "^1.60.0",

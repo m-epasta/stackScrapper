@@ -1,29 +1,45 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
 import { StackOverflowQuestion, StackOverflowAnswer, SearchResult, ErrorContext } from './types';
+import { Logger } from './logger';
 
 export class StackOverflowSearcher {
     private readonly baseUrl = 'https://api.stackexchange.com/2.3';
     private readonly site = 'stackoverflow';
 
     async search(errorContext: ErrorContext): Promise<SearchResult> {
-        const query = this.buildSearchQuery(errorContext);
-        const questions = await this.searchQuestions(query);
-        const answers = await this.getAnswersForQuestions(questions);
+        try {
+            Logger.log('=== STACKOVERFLOW SEARCHER START ===');
+            Logger.log(`Building query from: ${errorContext.errorMessage}`);
+            const query = this.buildSearchQuery(errorContext);
+            Logger.log(`Final query: ${query}`);
+            
+            Logger.log('Making API request...');
+            const questions = await this.searchQuestions(query);
+            Logger.log(`Found ${questions?.length || 0} questions`);
+            
+            const answers = await this.getAnswersForQuestions(questions);
+            Logger.log(`Answers map size: ${answers.size}`);
 
-        return {
-            query,
-            questions,
-            answers,
-            timestamp: Date.now()
-        };
+            Logger.log('=== STACKOVERFLOW SEARCHER END ===');
+            return {
+                query,
+                questions: questions || [],
+                answers,
+                timestamp: Date.now()
+            };
+        } catch (error) {
+            Logger.error(`=== SEARCH ERROR: ${error} ===`);
+            throw error;
+        }
     }
 
     private buildSearchQuery(errorContext: ErrorContext): string {
         const config = this.getConfig();
         let query = errorContext.errorMessage;
         
-        // Add code context if enabled
+        query = this.cleanErrorMessage(query);
+        
         if (config.includeCodeContext && errorContext.codeSnippet) {
             const codeKeywords = this.extractKeywordsFromCode(errorContext.codeSnippet);
             if (codeKeywords.length > 0) {
@@ -31,7 +47,6 @@ export class StackOverflowSearcher {
             }
         }
 
-        // Add language tag
         if (errorContext.language && errorContext.language !== 'plaintext') {
             query += ` [${errorContext.language}]`;
         }
@@ -39,8 +54,21 @@ export class StackOverflowSearcher {
         return query.trim();
     }
 
+    private cleanErrorMessage(errorMessage: string): string {
+        return errorMessage
+            .replace(/'.*?'/g, '')
+            .replace(/`.*?`/g, '')
+            .replace(/\/.*\//g, '')
+            .replace(/line \d+/gi, '')
+            .replace(/\d+/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
     private async searchQuestions(query: string): Promise<StackOverflowQuestion[]> {
         const config = this.getConfig();
+        
+        Logger.log(`API Config - hasApiKey: ${!!config.apiKey}, timeout: ${config.searchTimeout}`);
         
         try {
             const params: any = {
@@ -53,19 +81,32 @@ export class StackOverflowSearcher {
                 answers: 1
             };
 
-            // Add API key if provided
             if (config.apiKey) {
                 params.key = config.apiKey;
             }
+
+            Logger.log(`API URL: ${this.baseUrl}/search/advanced`);
+            Logger.log(`Request params: ${JSON.stringify(params)}`);
 
             const response = await axios.get(`${this.baseUrl}/search/advanced`, {
                 params,
                 timeout: config.searchTimeout
             });
 
+            Logger.log(`API Response status: ${response.status}`);
+            
+            if (response.data.error_id) {
+                Logger.error(`API Error: ${response.data.error_message}`);
+                return [];
+            }
+
+            Logger.log(`API returned ${response.data.items?.length || 0} items`);
             return response.data.items || [];
         } catch (error: any) {
-            console.error('Stack Overflow search failed:', error);
+            Logger.error(`Stack Overflow search failed: ${error.message}`);
+            if (error.response) {
+                Logger.log(`Response data: ${JSON.stringify(error.response.data)}`);
+            }
             throw new Error(`Failed to search Stack Overflow: ${error.message}`);
         }
     }
@@ -75,6 +116,7 @@ export class StackOverflowSearcher {
         const questionIds = questions.map(q => q.question_id);
         
         if (questionIds.length === 0) {
+            Logger.warn('No question IDs to fetch answers for');
             return new Map();
         }
 
@@ -91,6 +133,8 @@ export class StackOverflowSearcher {
                 params.key = config.apiKey;
             }
 
+            Logger.log(`Fetching answers for questions: ${questionIds.join(',')}`);
+
             const response = await axios.get(
                 `${this.baseUrl}/questions/${questionIds.join(';')}/answers`,
                 { params, timeout: config.searchTimeout }
@@ -105,7 +149,6 @@ export class StackOverflowSearcher {
                 answersMap.get(answer.question_id)!.push(answer);
             });
 
-            // Sort answers by score and accepted status
             answersMap.forEach((answers, questionId) => {
                 answers.sort((a, b) => {
                     if (a.is_accepted && !b.is_accepted) return -1;
@@ -114,18 +157,17 @@ export class StackOverflowSearcher {
                 });
             });
 
+            Logger.log(`Fetched answers for ${answersMap.size} questions`);
             return answersMap;
         } catch (error: any) {
-            console.error('Failed to fetch answers:', error);
+            Logger.error(`Failed to fetch answers: ${error.message}`);
             return new Map();
         }
     }
 
     private extractKeywordsFromCode(code: string): string[] {
-        // Extract potential keywords from code
         const keywords: string[] = [];
         
-        // Function/method names
         const functionMatches = code.match(/(function|def|class)\s+(\w+)/g);
         if (functionMatches) {
             functionMatches.forEach(match => {
@@ -134,7 +176,6 @@ export class StackOverflowSearcher {
             });
         }
         
-        // Variable names (longer ones are more meaningful)
         const variableMatches = code.match(/(const|let|var)\s+(\w+)/g);
         if (variableMatches) {
             variableMatches.forEach(match => {
@@ -143,7 +184,6 @@ export class StackOverflowSearcher {
             });
         }
         
-        // API calls, methods
         const methodMatches = code.match(/\.(\w+)\(/g);
         if (methodMatches) {
             methodMatches.forEach(match => {
@@ -152,11 +192,11 @@ export class StackOverflowSearcher {
             });
         }
 
-        return keywords.slice(0, 5); // Limit to 5 keywords
+        return keywords.slice(0, 5);
     }
 
     private getConfig() {
-        const config = vscode.workspace.getConfiguration('errorHelp');
+        const config = vscode.workspace.getConfiguration('stackScrapper');
         return {
             maxResults: config.get<number>('maxResults') || 10,
             searchTimeout: config.get<number>('searchTimeout') || 15000,

@@ -2,17 +2,19 @@ import * as vscode from 'vscode';
 import { ErrorDetector } from './errorDetector';
 import { StackOverflowSearcher } from './stackOverFlowSearcher';
 import { ResultsPanel } from './resultsPanel';
-import { ErrorHelpCodeActionProvider } from './codeActionsProvider';
+import { stackScrapperCodeActionProvider } from './codeActionsProvider';
+import { Logger } from './logger';
 
-let outputChannel: vscode.OutputChannel;
+export let outputChannel: vscode.OutputChannel;
 
 export function activate(context: vscode.ExtensionContext) {
     outputChannel = vscode.window.createOutputChannel('STACKSCRAPPER');
-    outputChannel.appendLine('StackScrapper extension activated');
     outputChannel.show();
+    Logger.init(outputChannel);
+    
 
     const testCommand = vscode.commands.registerCommand('stackscrapper.test', () => {
-        outputChannel.appendLine('TEST COMMAND EXECUTED');
+        Logger.debug('TEST COMMAND EXECUTED');
         vscode.window.showInformationMessage('StackScrapper test command working!');
     });
     
@@ -20,19 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
     const stackOverflowSearcher = new StackOverflowSearcher();
     let resultsPanel: ResultsPanel | undefined;
 
-    function log(message: string) {
-        const timestamp = new Date().toISOString();
-        outputChannel.appendLine(`[${timestamp}] ${message}`);
-        console.log(`STACKSCRAPPER: ${message}`);
-    }
-
-    function logError(message: string) {
-        const timestamp = new Date().toISOString();
-        outputChannel.appendLine(`[${timestamp}] ERROR: ${message}`);
-        console.error(`STACKSCRAPPER ERROR: ${message}`);
-    }
-
-    const codeActionProvider = new ErrorHelpCodeActionProvider();
+    const codeActionProvider = new stackScrapperCodeActionProvider();
     const codeActionProviderRegistration = vscode.languages.registerCodeActionsProvider(
         [
             'javascript', 'typescript', 'python', 'java', 
@@ -44,69 +34,69 @@ export function activate(context: vscode.ExtensionContext) {
         }
     );
 
-    log('Code action provider registered');
+    Logger.log('Code action provider registered');
 
-    const searchCurrentErrorCommand = vscode.commands.registerCommand('errorHelp.searchCurrentError', async () => {
-        log('Command: searchCurrentError called');
+    const searchCurrentErrorCommand = vscode.commands.registerCommand('stackScrapper.searchCurrentError', async () => {
+        Logger.log('Command: searchCurrentError called');
         
         try {
             const errorContext = await errorDetector.getCurrentErrorContext(); 
             if (!errorContext) {
-                log('No error context found in current file');
+                Logger.log('No error context found in current file');
                 vscode.window.showWarningMessage('No error detected in current file.');
                 return;
             }
 
-            log(`Error context found: ${errorContext.errorMessage}`);
+            Logger.log(`Error context found: ${errorContext.errorMessage}`);
             await performSearch(errorContext);
         } catch (error: any) {
-            logError(`Error in searchCurrentError: ${error.message}`);
+            Logger.error(`Error in searchCurrentError: ${error.message}`);
             vscode.window.showErrorMessage(`Error search failed: ${error.message}`);
         }
     });
 
-    const quickSearchCommand = vscode.commands.registerCommand('errorHelp.quickSearch', async () => {
-        log('Command: quickSearch called');
+    const quickSearchCommand = vscode.commands.registerCommand('stackScrapper.quickSearch', async () => {
+        Logger.log('Command: quickSearch called');
         
         try {
             const errorContext = await errorDetector.getCurrentErrorContext() || 
                                 await errorDetector.getSelectedErrorContext(); 
             
             if (!errorContext) {
-                log('No error context found for quick search');
+                Logger.log('No error context found for quick search');
                 vscode.window.showWarningMessage('No error detected. Select an error message or ensure there are diagnostics.');
                 return;
             }
 
-            log(`Quick search context found: ${errorContext.errorMessage}`);
+            Logger.log(`Quick search context found: ${errorContext.errorMessage}`);
             await performSearch(errorContext);
         } catch (error: any) {
-            logError(`Quick search failed: ${error.message}`);
+            Logger.error(`Quick search failed: ${error.message}`);
             vscode.window.showErrorMessage(`Quick search failed: ${error.message}`);
         }
     });
 
-    const searchSelectedErrorCommand = vscode.commands.registerCommand('errorHelp.searchSelectedError', async () => {
-        log('Command: searchSelectedError called');
+    const searchSelectedErrorCommand = vscode.commands.registerCommand('stackScrapper.searchSelectedError', async () => {
+        Logger.log('Command: searchSelectedError called');
         
         try {
             const errorContext = await errorDetector.getSelectedErrorContext(); 
             if (!errorContext) {
-                log('No selected error context found');
+                Logger.log('No selected error context found');
                 vscode.window.showWarningMessage('Please select an error message to search.');
                 return;
             }
 
-            log(`Selected error context found: ${errorContext.errorMessage}`);
+            Logger.error(`Selected error context found: ${errorContext.errorMessage}`);
             await performSearch(errorContext);
         } catch (error: any) {
-            logError(`Selected error search failed: ${error.message}`);
+            Logger.error(`Selected error search failed: ${error.message}`);
             vscode.window.showErrorMessage(`Selected error search failed: ${error.message}`);
         }
     });
 
-    const searchErrorCommand = vscode.commands.registerCommand('errorHelp.searchError', async () => {
-        log('Command: searchError called');
+    const searchErrorCommand = vscode.commands.registerCommand('stackScrapper.searchError', async () => {
+        Logger.log('Command: searchError called');
         
         try {
             const query = await vscode.window.showInputBox({
@@ -115,7 +105,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
 
             if (!query) {
-                log('Manual search cancelled by user');
+                Logger.log('Manual search cancelled by user');
                 return;
             }
 
@@ -127,16 +117,16 @@ export function activate(context: vscode.ExtensionContext) {
                 lineNumber: 0
             };
 
-            log(`Manual search with query: ${query}`);
+            Logger.log(`Manual search with query: ${query}`);
             await performSearch(errorContext);
         } catch (error: any) {
-            logError(`Manual search failed: ${error.message}`);
+            Logger.error(`Manual search failed: ${error.message}`);
             vscode.window.showErrorMessage(`Manual search failed: ${error.message}`);
         }
     });
 
     async function performSearch(errorContext: any) {
-        log(`Starting search with context: ${errorContext.errorMessage}`);
+        Logger.log(`Starting search with context: ${errorContext.errorMessage}`);
         
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -146,26 +136,26 @@ export function activate(context: vscode.ExtensionContext) {
             progress.report({ increment: 0 });
 
             try {
-                log('Calling stackOverflowSearcher.search');
+                Logger.log('Calling stackOverflowSearcher.search');
                 const searchResult = await stackOverflowSearcher.search(errorContext);
-                log(`Search completed, found ${searchResult.questions?.length || 0} questions`);
+                Logger.log(`Search completed, found ${searchResult.questions?.length || 0} questions`);
                 progress.report({ increment: 100 });
 
                 if (!resultsPanel) {
-                    log('Creating new results panel');
+                    Logger.log('Creating new results panel');
                     resultsPanel = ResultsPanel.createOrShow(context.extensionUri);
                     resultsPanel.onDidDispose(() => {
                         resultsPanel = undefined;
                     });
                 }
 
-                log('Updating panel with results');
+                Logger.log('Updating panel with results');
                 resultsPanel.update(searchResult, errorContext);
                 resultsPanel.reveal();
-                log('Panel update complete');
+                Logger.log('Panel update complete');
                 
             } catch (error: any) {
-                logError(`Error in performSearch: ${error.message}`);
+                Logger.error(`Error in performSearch: ${error.message}`);
                 vscode.window.showErrorMessage(`Search failed: ${error.message}`);
             }
         });
