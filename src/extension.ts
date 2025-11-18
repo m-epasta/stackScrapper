@@ -26,7 +26,9 @@ export function activate(context: vscode.ExtensionContext) {
     const codeActionProviderRegistration = vscode.languages.registerCodeActionsProvider(
         [
             'javascript', 'typescript', 'python', 'java', 
-            'cpp', 'csharp', 'php', 'ruby', 'go'
+            'cpp', 'csharp', 'php', 'ruby', 'go', 'rust',
+            'c', 'zig', 'lua', 'scala', 'swift', 'r', 'clojure',
+            'dart', 'erlang', 'elixir', 'ocaml', 'kotlin', 'json'
         ],
         codeActionProvider,
         {

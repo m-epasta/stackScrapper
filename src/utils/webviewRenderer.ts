@@ -5,36 +5,43 @@ export class WebviewRenderer {
     static renderQuestion(question: StackOverflowQuestion, answers: StackOverflowAnswer[]): string {
         const topAnswer = answers[0];
         
+        // Escape ALL user-generated content
+        const safeLink = HtmlUtils.escapeHtml(question.link);
+        const safeTitle = HtmlUtils.escapeHtml(question.title);
+        const safeTags = question.tags?.map(tag => HtmlUtils.escapeHtml(tag)) || [];
+        const safeAnswerCount = HtmlUtils.escapeHtml(question.answer_count.toString());
+        const safeViewCount = HtmlUtils.escapeHtml(question.view_count.toLocaleString());
+        
         return `
             <div class="result-item">
                 <div class="question-title">
-                    <a href="#" onclick="openLink('${question.link}')">${HtmlUtils.escapeHtml(question.title)}</a>
+                    <a href="#" data-link="${safeLink}">${safeTitle}</a>
                 </div>
                 
                 <div class="question-meta">
                     <span class="score ${HtmlUtils.getScoreClass(question.score)}">
                         ▲ ${question.score}
                     </span>
-                    • ${question.answer_count} answers
-                    • ${question.view_count.toLocaleString()} views
+                    • ${safeAnswerCount} answers
+                    • ${safeViewCount} views
                     • ${question.is_answered ? '✓ Answered' : 'Unanswered'}
                 </div>
                 
-                ${question.tags && question.tags.length > 0 ? `
+                ${safeTags.length > 0 ? `
                     <div class="tags">
-                        ${question.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        ${safeTags.map(tag => `<span class="tag">${tag}</span>`).join('')}
                     </div>
                 ` : ''}
                 
                 ${topAnswer ? this.renderAnswer(topAnswer) : '<p style="color: var(--vscode-descriptionForeground); font-style: italic;">No answers yet</p>'}
                 
                 <div style="margin-top: 10px;">
-                    <button class="copy-btn" onclick="openLink('${question.link}')">
+                    <button class="copy-btn" data-link="${safeLink}">
                         View Full Question
                     </button>
                     ${answers.length > 1 ? `
-                        <button class="copy-btn" onclick="openLink('${question.link}#answers')">
-                            View All Answers (${answers.length})
+                        <button class="copy-btn" data-link="${safeLink}#answers">
+                            View All Answers (${HtmlUtils.escapeHtml(answers.length.toString())})
                         </button>
                     ` : ''}
                 </div>
@@ -43,8 +50,15 @@ export class WebviewRenderer {
     }
 
     static renderAnswer(answer: StackOverflowAnswer): string {
-        const answerBody = HtmlUtils.stripHtmlTags(answer.body).substring(0, 400) + '...';
+        // Escape all user-generated content
+        const safeBody = HtmlUtils.stripHtmlTags(answer.body).substring(0, 400) + '...';
         const codeBlocks = HtmlUtils.extractCodeBlocks(answer.body);
+        const safeOwnerName = answer.owner ? HtmlUtils.escapeHtml(answer.owner.display_name) : '';
+        const safeAnswerId = HtmlUtils.escapeHtml(answer.answer_id.toString());
+        
+        // Escape code block for display and for copy function
+        const safeCodeBlock = codeBlocks.length > 0 ? HtmlUtils.escapeHtml(codeBlocks[0]) : '';
+        const safeCodeForCopy = codeBlocks.length > 0 ? HtmlUtils.escapeCode(codeBlocks[0]) : '';
         
         return `
             <div class="answer ${answer.is_accepted ? 'accepted-answer' : ''}">
@@ -53,25 +67,25 @@ export class WebviewRenderer {
                         ▲ ${answer.score}
                     </span>
                     ${answer.is_accepted ? '<span class="accepted-badge">✓ ACCEPTED</span>' : ''}
-                    ${answer.owner ? `<span>By ${HtmlUtils.escapeHtml(answer.owner.display_name)}</span>` : ''}
+                    ${safeOwnerName ? `<span>By ${safeOwnerName}</span>` : ''}
                 </div>
                 
-                <div>${answerBody}</div>
+                <div>${HtmlUtils.escapeHtml(safeBody)}</div>
                 
                 ${codeBlocks.length > 0 ? `
                     <div class="code-block">
                         <div style="margin-bottom: 8px; font-size: 0.8em; color: var(--vscode-descriptionForeground);">
                             Code example:
                         </div>
-                        <pre style="margin: 0; white-space: pre-wrap;">${HtmlUtils.escapeHtml(codeBlocks[0])}</pre>
-                        <button class="copy-btn" onclick="copyCode('${HtmlUtils.escapeCode(codeBlocks[0])}')">
+                        <pre style="margin: 0; white-space: pre-wrap;">${safeCodeBlock}</pre>
+                        <button class="copy-btn" data-code="${safeCodeForCopy}">
                             Copy Code
                         </button>
                     </div>
                 ` : ''}
                 
                 <div style="margin-top: 10px;">
-                    <button class="copy-btn" onclick="openLink('https://stackoverflow.com/a/${answer.answer_id}')">
+                    <button class="copy-btn" data-link="https://stackoverflow.com/a/${safeAnswerId}">
                         View Full Answer
                     </button>
                 </div>
@@ -80,9 +94,10 @@ export class WebviewRenderer {
     }
 
     static renderResultsContainer(questionsCount: number): string {
+        const safeCount = HtmlUtils.escapeHtml(questionsCount.toString());
         return `
             <div style="margin-bottom: 15px; font-size: 0.9em; color: var(--vscode-descriptionForeground);">
-                Found ${questionsCount} results from Stack Overflow
+                Found ${safeCount} results from Stack Overflow
             </div>
         `;
     }
@@ -99,6 +114,37 @@ export class WebviewRenderer {
                     <li>Check your internet connection</li>
                 </ul>
             </div>
+        `;
+    }
+
+    static getEventListenersScript(): string {
+        return `
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Handle link buttons
+                    document.querySelectorAll('[data-link]').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const link = this.getAttribute('data-link');
+                            openLink(link);
+                        });
+                    });
+                    
+                    document.querySelectorAll('[data-code]').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const code = this.getAttribute('data-code');
+                            copyCode(code);
+                        });
+                    });
+                    
+                    document.querySelectorAll('a[data-link]').forEach(link => {
+                        link.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            const linkUrl = this.getAttribute('data-link');
+                            openLink(linkUrl);
+                        });
+                    });
+                });
+            </script>
         `;
     }
 }

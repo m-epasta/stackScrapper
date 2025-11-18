@@ -2,7 +2,7 @@
   "name": "stackScrapper",
   "displayName": "STACKSCRAPPER - the extension that browse stackoverflow for you.",
   "description": "Scrapes Stack Overflow for error solutions and displays in Smart Help",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "publisher": "m-epasta",
   "repository": {
     "type": "git",
