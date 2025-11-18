@@ -6,3 +6,7 @@
 - Stack Overflow error search integration
 - Code actions with lightbulb menu
 - Smart Help panel for results
+
+## [0.1.5]
+
+- functionnal extension
