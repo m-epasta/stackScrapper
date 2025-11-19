@@ -11,6 +11,7 @@
     
     // HTML utilities
     function escapeHtml(unsafe) {
+        if (typeof unsafe != 'string') return '';
         return unsafe
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
@@ -20,13 +21,20 @@
     }
 
     function escapeCode(code) {
-        return code.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+        if (typeof code !== 'string') return '';
+        return code
+            .replace(/\\/g, '\\\\')  
+            .replace(/'/g, "\\'")
+            .replace(/"/g, '\\"')
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '\\r')
+            .replace(/\t/g, '\\t');
     }
 
     function stripHtmlTags(html) {
-        const tmp = document.createElement('div');
-        tmp.innerHTML = html;
-        return tmp.textContent || tmp.innerText || '';
+        if (typeof code !== 'string') return '';
+
+        return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
     }
 
     function extractCodeBlocks(html) {
@@ -127,6 +135,7 @@
             const answersMap = new Map(result.answers);
             
             queryInfo.textContent = `Search query: "${result.query}"`;
+            queryInfo.textContent = `Type of query: "${result.queryType}"`; // TODO: be careful
             
             if (errorContext && errorContext.errorMessage) {
                 errorContextEl.innerHTML = `

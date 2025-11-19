@@ -40,3 +40,5 @@ export interface ErrorContext {
     filePath: string;
     lineNumber: number;
 }
+
+export type ErrorType = 'syntax' | 'reference' | 'type' | 'runtime' | 'import' | 'unknown';

@@ -134,7 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
             location: vscode.ProgressLocation.Notification,
             title: `Searching Stack Overflow for: ${errorContext.errorMessage.substring(0, 50)}...`,
             cancellable: false
-        }, async (progress) => {
+        }, async (progress: any) => {
             progress.report({ increment: 0 });
 
             try {

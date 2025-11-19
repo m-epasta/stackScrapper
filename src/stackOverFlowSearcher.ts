@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import axios from 'axios';
 import { StackOverflowQuestion, StackOverflowAnswer, SearchResult, ErrorContext } from './types';
 import { Logger } from './logger';
+import { QueryBuilder } from './buildQuery';
+import { ConfigManager } from './configManager';
 
 export class StackOverflowSearcher {
     private readonly baseUrl = 'https://api.stackexchange.com/2.3';
@@ -10,8 +12,9 @@ export class StackOverflowSearcher {
     async search(errorContext: ErrorContext): Promise<SearchResult> {
         try {
             Logger.log('=== STACKOVERFLOW SEARCHER START ===');
-            Logger.log(`Building query from: ${errorContext.errorMessage}`);
-            const query = this.buildSearchQuery(errorContext);
+            
+            const queryBuilder = new QueryBuilder(errorContext);
+            const query = queryBuilder.buildQuery();
             Logger.log(`Final query: ${query}`);
             
             Logger.log('Making API request...');
@@ -34,39 +37,8 @@ export class StackOverflowSearcher {
         }
     }
 
-    private buildSearchQuery(errorContext: ErrorContext): string {
-        const config = this.getConfig();
-        let query = errorContext.errorMessage;
-        
-        query = this.cleanErrorMessage(query);
-        
-        if (config.includeCodeContext && errorContext.codeSnippet) {
-            const codeKeywords = this.extractKeywordsFromCode(errorContext.codeSnippet);
-            if (codeKeywords.length > 0) {
-                query += ` ${codeKeywords.join(' ')}`;
-            }
-        }
-
-        if (errorContext.language && errorContext.language !== 'plaintext') {
-            query += ` [${errorContext.language}]`;
-        }
-
-        return query.trim();
-    }
-
-    private cleanErrorMessage(errorMessage: string): string {
-        return errorMessage
-            .replace(/'.*?'/g, '')
-            .replace(/`.*?`/g, '')
-            .replace(/\/.*\//g, '')
-            .replace(/line \d+/gi, '')
-            .replace(/\d+/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-
     private async searchQuestions(query: string): Promise<StackOverflowQuestion[]> {
-        const config = this.getConfig();
+        const config = ConfigManager.getConfig();
         
         Logger.log(`API Config - hasApiKey: ${!!config.apiKey}, timeout: ${config.searchTimeout}`);
         
@@ -112,7 +84,7 @@ export class StackOverflowSearcher {
     }
 
     private async getAnswersForQuestions(questions: StackOverflowQuestion[]): Promise<Map<number, StackOverflowAnswer[]>> {
-        const config = this.getConfig();
+        const config = ConfigManager.getConfig();
         const questionIds = questions.map(q => q.question_id);
         
         if (questionIds.length === 0) {
@@ -163,47 +135,5 @@ export class StackOverflowSearcher {
             Logger.error(`Failed to fetch answers: ${error.message}`);
             return new Map();
         }
-    }
-
-    private extractKeywordsFromCode(code: string): string[] {
-        const keywords: string[] = [];
-        
-        const functionMatches = code.match(/(function|def|class)\s+(\w+)/g);
-        if (functionMatches) {
-            functionMatches.forEach(match => {
-                const name = match.split(/\s+/)[1];
-                if (name) keywords.push(name);
-            });
-        }
-        
-        const variableMatches = code.match(/(const|let|var)\s+(\w+)/g);
-        if (variableMatches) {
-            variableMatches.forEach(match => {
-                const name = match.split(/\s+/)[1];
-                if (name && name.length > 3) keywords.push(name);
-            });
-        }
-        
-        const methodMatches = code.match(/\.(\w+)\(/g);
-        if (methodMatches) {
-            methodMatches.forEach(match => {
-                const method = match.slice(1, -1);
-                if (method && method.length > 2) keywords.push(method);
-            });
-        }
-
-        return keywords.slice(0, 5);
-    }
-
-    private getConfig() {
-        const config = vscode.workspace.getConfiguration('stackScrapper');
-        return {
-            maxResults: config.get<number>('maxResults') || 10,
-            searchTimeout: config.get<number>('searchTimeout') || 15000,
-            includeCodeContext: config.get<boolean>('includeCodeContext') || true,
-            apiKey: config.get<string>('apiKey') || '',
-            filterByAccepted: config.get<boolean>('filterByAccepted') || true,
-            minScore: config.get<number>('minScore') || 1
-        };
     }
 }
